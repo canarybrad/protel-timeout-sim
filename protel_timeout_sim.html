@@ -3,21 +3,25 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Reservation Lock Contention Simulator</title>
+<title data-i18n="title">Reservation Lock Contention Simulator</title>
 <link rel="stylesheet" href="protel_timeout_sim.css" />
 </head>
 <body>
 <div class="app">
   <header class="header">
     <div>
-      <h1>Reservation Lock Contention Simulator</h1>
-      <p class="subtitle">
+      <h1 data-i18n="title">Reservation Lock Contention Simulator</h1>
+      <p class="subtitle" data-i18n="subtitle">
         How per-reservation locks, multi-step API plans, and slow PMS
         responses cascade into timeouts as traffic ramps.
       </p>
     </div>
     <div class="header-actions">
-      <button id="reset-btn" class="btn">Reset</button>
+      <select id="lang-select" class="btn lang-select" aria-label="Language">
+        <option value="en">English</option>
+        <option value="el">Ελληνικά</option>
+      </select>
+      <button id="reset-btn" class="btn" data-i18n="reset">Reset</button>
       <button id="play-btn" class="btn btn-primary">Pause</button>
     </div>
   </header>
@@ -25,70 +29,70 @@
   <section class="controls">
     <div class="control">
       <label>
-        PMS per-step response time
+        <span data-i18n="response">PMS per-step response time</span>
         <span class="value" id="response-value">15s</span>
       </label>
       <input id="response-slider" type="range" min="5" max="60" step="1" value="15" />
-      <div class="hint">How long the PMS takes per API step (the lock is held for the full duration).</div>
+      <div class="hint" data-i18n="responseHint">How long the PMS takes per API step (the lock is held for the full duration).</div>
     </div>
     <div class="control">
       <label>
-        Inbound API traffic
+        <span data-i18n="traffic">Inbound API traffic</span>
         <span class="value" id="traffic-value">4.0 / sec</span>
       </label>
       <input id="traffic-slider" type="range" min="1" max="200" step="1" value="40" />
-      <div class="hint">Combined arrival rate of PMS actions across the property.</div>
+      <div class="hint" data-i18n="trafficHint">Combined arrival rate of PMS actions across the property.</div>
     </div>
     <div class="control">
       <label>
-        Hot-reservation skew
+        <span data-i18n="hot">Hot-reservation skew</span>
         <span class="value" id="hot-value">35%</span>
       </label>
       <input id="hot-slider" type="range" min="0" max="80" step="1" value="35" />
-      <div class="hint">% of traffic that targets the 10 hottest reservations (arrival day clustering).</div>
+      <div class="hint" data-i18n="hotHint">% of traffic that targets the 10 hottest reservations (arrival day clustering).</div>
     </div>
     <div class="control">
       <label>
-        Active reservations
+        <span data-i18n="reservations">Active reservations</span>
         <span class="value" id="reservations-value">120</span>
       </label>
       <input id="reservations-slider" type="range" min="20" max="500" step="10" value="120" />
-      <div class="hint">Pool size that traffic randomly draws from.</div>
+      <div class="hint" data-i18n="reservationsHint">Pool size that traffic randomly draws from.</div>
     </div>
     <div class="control">
       <label>
-        Time acceleration
+        <span data-i18n="speed">Time acceleration</span>
         <span class="value" id="speed-value">20x</span>
       </label>
       <input id="speed-slider" type="range" min="1" max="120" step="1" value="20" />
-      <div class="hint">Simulation runs faster than wall-clock for visibility.</div>
+      <div class="hint" data-i18n="speedHint">Simulation runs faster than wall-clock for visibility.</div>
     </div>
   </section>
 
   <section class="meters">
     <div class="meter">
-      <div class="meter-label">Timeout rate (1m)</div>
+      <div class="meter-label" data-i18n="timeoutRate">Timeout rate (1m)</div>
       <div class="meter-value" id="timeout-rate">0.0%</div>
       <div class="meter-bar"><div class="meter-fill" id="timeout-rate-bar"></div></div>
     </div>
     <div class="meter">
-      <div class="meter-label">Avg lock wait</div>
+      <div class="meter-label" data-i18n="avgWait">Avg lock wait</div>
       <div class="meter-value" id="avg-wait">0.0s</div>
     </div>
     <div class="meter">
-      <div class="meter-label">P95 lock wait</div>
+      <div class="meter-label" data-i18n="p95Wait">P95 lock wait</div>
       <div class="meter-value" id="p95-wait">0.0s</div>
     </div>
     <div class="meter">
-      <div class="meter-label">Active locks</div>
+      <div class="meter-label" data-i18n="activeLocks">Active locks</div>
       <div class="meter-value" id="active-locks">0</div>
     </div>
     <div class="meter">
-      <div class="meter-label">Queued waiters</div>
+      <div class="meter-label" data-i18n="queuedWaiters">Queued waiters</div>
       <div class="meter-value" id="queued-waiters">0</div>
     </div>
     <div class="meter">
-      <div class="meter-label">Throughput (1m)</div>
+      <div class="meter-label" data-i18n="throughput">Throughput (1m)</div>
       <div class="meter-value" id="throughput">0 / min</div>
     </div>
   </section>
@@ -96,21 +100,21 @@
   <section class="charts">
     <div class="chart-card">
       <header class="chart-header">
-        <h3>Locks &amp; queue over time</h3>
+        <h3 data-i18n="chartLocksTitle">Locks &amp; queue over time</h3>
         <div class="legend">
-          <span><i class="dot dot-active"></i>Active locks</span>
-          <span><i class="dot dot-queue"></i>Queued waiters</span>
-          <span><i class="dot dot-timeout"></i>Timeouts / sec</span>
+          <span><i class="dot dot-active"></i><span data-i18n="legendActive">Active locks</span></span>
+          <span><i class="dot dot-queue"></i><span data-i18n="legendQueue">Queued waiters</span></span>
+          <span><i class="dot dot-timeout"></i><span data-i18n="legendTimeouts">Timeouts / sec</span></span>
         </div>
       </header>
       <canvas id="timeline-canvas" width="900" height="220"></canvas>
     </div>
     <div class="chart-card">
       <header class="chart-header">
-        <h3>Lock wait time distribution</h3>
+        <h3 data-i18n="chartHistTitle">Lock wait time distribution</h3>
         <div class="legend">
-          <span>Bucket: 5s</span>
-          <span><i class="dot dot-timeout"></i>≥ 90s = timeout</span>
+          <span data-i18n="legendBucket">Bucket: 5s</span>
+          <span><i class="dot dot-timeout"></i><span data-i18n="legendTOBucket">≥ 90s = timeout</span></span>
         </div>
       </header>
       <canvas id="histogram-canvas" width="900" height="220"></canvas>
@@ -120,15 +124,15 @@
   <section class="action-views">
     <div class="chart-card">
       <header class="chart-header">
-        <h3>Hot reservation #0 — request trace</h3>
-        <div class="legend"><span>arrival → start → finish, last 60s</span></div>
+        <h3 data-i18n="chartFocusTitle">Hot reservation #0 — request trace</h3>
+        <div class="legend"><span data-i18n="focusLegend">arrival → start → finish, last 60s</span></div>
       </header>
       <canvas id="focus-canvas" width="900" height="260"></canvas>
     </div>
     <div class="chart-card">
       <header class="chart-header">
-        <h3>By action kind (rolling 60s)</h3>
-        <div class="legend"><span>bar = share of traffic</span></div>
+        <h3 data-i18n="chartBreakdownTitle">By action kind (rolling 60s)</h3>
+        <div class="legend"><span data-i18n="breakdownLegend">bar = share of traffic</span></div>
       </header>
       <div id="action-breakdown" class="action-breakdown"></div>
     </div>
@@ -136,48 +140,36 @@
 
   <section class="reservations">
     <header class="chart-header">
-      <h3>Reservation lock state <span class="hint" style="margin-left:8px">first 80 shown</span></h3>
+      <h3><span data-i18n="gridTitle">Reservation lock state</span> <span class="hint" style="margin-left:8px" data-i18n="gridShown">first 80 shown</span></h3>
       <div class="legend">
-        <span><i class="cell cell-idle"></i>idle</span>
-        <span><i class="cell cell-held"></i>locked</span>
-        <span><i class="cell cell-q1"></i>1 waiter</span>
-        <span><i class="cell cell-q2"></i>2-3 waiters</span>
-        <span><i class="cell cell-q3"></i>4+ waiters</span>
-        <span><i class="cell cell-timeout"></i>recent timeout</span>
+        <span><i class="cell cell-idle"></i><span data-i18n="cellIdle">idle</span></span>
+        <span><i class="cell cell-held"></i><span data-i18n="cellLocked">locked</span></span>
+        <span><i class="cell cell-q1"></i><span data-i18n="cellQ1">1 waiter</span></span>
+        <span><i class="cell cell-q2"></i><span data-i18n="cellQ2">2-3 waiters</span></span>
+        <span><i class="cell cell-q3"></i><span data-i18n="cellQ3">4+ waiters</span></span>
+        <span><i class="cell cell-timeout"></i><span data-i18n="cellTO">recent timeout</span></span>
       </div>
     </header>
     <div class="grid" id="reservation-grid"></div>
   </section>
 
   <section class="notes">
-    <h3>What the model reflects</h3>
+    <h3 data-i18n="notesTitle">What the model reflects</h3>
     <ul>
       <li>
-        <strong>Lock scope:</strong> one distributed lock per reservation,
-        keyed by hotel and confirmation number. Any concurrent action on the
-        same reservation must wait its turn.
+        <strong data-i18n="note1Bold">Lock scope:</strong> <span data-i18n="note1">one distributed lock per reservation, keyed by hotel and confirmation number. Any concurrent action on the same reservation must wait its turn.</span>
       </li>
       <li>
-        <strong>Wait budget:</strong> a waiter retries lock acquisition every
-        0.5 seconds, up to 180 attempts. After <strong>90 seconds</strong> it
-        gives up and the request fails with a "lock not acquired" error.
+        <strong data-i18n="note2Bold">Wait budget:</strong> <span data-i18n="note2">a waiter retries lock acquisition every 0.5 seconds, up to 180 attempts. After 90 seconds it gives up and the request fails with a "lock not acquired" error.</span>
       </li>
       <li>
-        <strong>Plan length:</strong> realistic hospitality action mix —
-        pre-check-in is 3 API steps, post-notes / update-guest / get-folios /
-        post-payment-method are 2 steps, refresh is 1 step. Each step holds
-        the lock for the full PMS response time.
+        <strong data-i18n="note3Bold">Plan length:</strong> <span data-i18n="note3">realistic hospitality action mix — pre-check-in is 3 API steps, post-notes / update-guest / get-folios / post-payment-method are 2 steps, refresh is 1 step. Each step holds the lock for the full PMS response time.</span>
       </li>
       <li>
-        <strong>Transient retries:</strong> ~10% of fetches hit a transient
-        "not yet finalized" warning from the PMS and retry once after a 10s
-        cool-off, inflating the time the lock stays held.
+        <strong data-i18n="note4Bold">Transient retries:</strong> <span data-i18n="note4">~10% of fetches hit a transient "not yet finalized" warning from the PMS and retry once after a 10s cool-off, inflating the time the lock stays held.</span>
       </li>
       <li>
-        <strong>Hot-reservation skew:</strong> on arrival day, many flows
-        (pre-check-in, payment method, post-notes, folios) target the same
-        few confirmation numbers — the slider concentrates traffic to expose
-        contention.
+        <strong data-i18n="note5Bold">Hot-reservation skew:</strong> <span data-i18n="note5">on arrival day, many flows (pre-check-in, payment method, post-notes, folios) target the same few confirmation numbers — the slider concentrates traffic to expose contention.</span>
       </li>
     </ul>
   </section>

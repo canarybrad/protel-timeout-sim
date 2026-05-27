@@ -9,6 +9,177 @@ const HISTORY_S = 120;                  // 2 minutes of timeline
 const FOCUS_REZ_IDX = 0;                // hottest reservation; we trace its requests
 const FOCUS_LOG_MAX = 25;               // most recent requests on focus rez
 
+// ───── Localization ─────
+const STRINGS = {
+  en: {
+    title: "Reservation Lock Contention Simulator",
+    subtitle:
+      "How per-reservation locks, multi-step API plans, and slow PMS responses cascade into timeouts as traffic ramps.",
+    reset: "Reset",
+    pause: "Pause",
+    resume: "Resume",
+    response: "PMS per-step response time",
+    responseHint: "How long the PMS takes per API step (the lock is held for the full duration).",
+    traffic: "Inbound API traffic",
+    trafficHint: "Combined arrival rate of PMS actions across the property.",
+    hot: "Hot-reservation skew",
+    hotHint: "% of traffic that targets the 10 hottest reservations (arrival day clustering).",
+    reservations: "Active reservations",
+    reservationsHint: "Pool size that traffic randomly draws from.",
+    speed: "Time acceleration",
+    speedHint: "Simulation runs faster than wall-clock for visibility.",
+    timeoutRate: "Timeout rate (1m)",
+    avgWait: "Avg lock wait",
+    p95Wait: "P95 lock wait",
+    activeLocks: "Active locks",
+    queuedWaiters: "Queued waiters",
+    throughput: "Throughput (1m)",
+    chartLocksTitle: "Locks & queue over time",
+    legendActive: "Active locks",
+    legendQueue: "Queued waiters",
+    legendTimeouts: "Timeouts / sec",
+    chartHistTitle: "Lock wait time distribution",
+    legendBucket: "Bucket: 5s",
+    legendTOBucket: "≥ 90s = timeout",
+    chartFocusTitle: "Hot reservation #0 — request trace",
+    focusLegend: "arrival → start → finish, last 60s",
+    chartBreakdownTitle: "By action kind (rolling 60s)",
+    breakdownLegend: "bar = share of traffic",
+    gridTitle: "Reservation lock state",
+    gridShown: "first 80 shown",
+    cellIdle: "idle",
+    cellLocked: "locked",
+    cellQ1: "1 waiter",
+    cellQ2: "2-3 waiters",
+    cellQ3: "4+ waiters",
+    cellTO: "recent timeout",
+    notesTitle: "What the model reflects",
+    note1Bold: "Lock scope:",
+    note1: "one distributed lock per reservation, keyed by hotel and confirmation number. Any concurrent action on the same reservation must wait its turn.",
+    note2Bold: "Wait budget:",
+    note2: "a waiter retries lock acquisition every 0.5 seconds, up to 180 attempts. After 90 seconds it gives up and the request fails with a \"lock not acquired\" error.",
+    note3Bold: "Plan length:",
+    note3: "realistic hospitality action mix — pre-check-in is 3 API steps, post-notes / update-guest / get-folios / post-payment-method are 2 steps, refresh is 1 step. Each step holds the lock for the full PMS response time.",
+    note4Bold: "Transient retries:",
+    note4: "~10% of fetches hit a transient \"not yet finalized\" warning from the PMS and retry once after a 10s cool-off, inflating the time the lock stays held.",
+    note5Bold: "Hot-reservation skew:",
+    note5: "on arrival day, many flows (pre-check-in, payment method, post-notes, folios) target the same few confirmation numbers — the slider concentrates traffic to expose contention.",
+    // Dynamic / canvas
+    sec: "s",
+    perSec: (n) => `${n} / sec`,
+    perMin: (n) => `${n} / min`,
+    percent: (n) => `${n}%`,
+    speedX: (n) => `${n}x`,
+    maxLocks: (n) => `max locks: ${n}`,
+    maxTimeouts: (n) => `max timeouts/s: ${n}`,
+    waitingSamples: "waiting for samples…",
+    bucketTO: "≥90 TO",
+    noFocusTraffic: "no traffic on reservation #0 yet…",
+    timeoutsLabel: (n, pct) => `${n} TO (${pct}%)`,
+    avgWaitS: (n) => `${n}s wait`,
+    tickRel: (s) => `-${s}s`,
+    actionNames: {
+      PRE_CHECKIN: "PRE_CHECKIN",
+      POST_NOTES: "POST_NOTES",
+      UPDATE_GUEST: "UPDATE_GUEST",
+      GET_FOLIOS: "GET_FOLIOS",
+      POST_PAYMENT_METHOD: "POST_PAYMENT_METHOD",
+      PRE_CHECKOUT: "PRE_CHECKOUT",
+      ADD_ACCOMPANYING_GUEST: "ADD_ACCOMPANYING_GUEST",
+      REFRESH_RESERVATION: "REFRESH_RESERVATION",
+      REFRESH_GUEST: "REFRESH_GUEST",
+    },
+  },
+  el: {
+    title: "Προσομοιωτής Συμφόρησης Κλειδωμάτων Κρατήσεων",
+    subtitle:
+      "Πώς τα κλειδώματα ανά κράτηση, τα πολυβηματικά σχέδια API και οι αργές αποκρίσεις του PMS κλιμακώνονται σε λήξεις χρόνου καθώς αυξάνεται η κίνηση.",
+    reset: "Επαναφορά",
+    pause: "Παύση",
+    resume: "Συνέχιση",
+    response: "Χρόνος απόκρισης PMS ανά βήμα",
+    responseHint: "Πόσο διαρκεί κάθε βήμα API του PMS (το κλείδωμα κρατείται για όλη τη διάρκεια).",
+    traffic: "Εισερχόμενη κίνηση API",
+    trafficHint: "Συνολικός ρυθμός άφιξης ενεργειών PMS στο ξενοδοχείο.",
+    hot: "Συγκέντρωση σε δημοφιλείς κρατήσεις",
+    hotHint: "% κίνησης που στοχεύει τις 10 πιο δημοφιλείς κρατήσεις (συγκέντρωση ημέρας άφιξης).",
+    reservations: "Ενεργές κρατήσεις",
+    reservationsHint: "Μέγεθος συνόλου από όπου επιλέγει τυχαία η κίνηση.",
+    speed: "Επιτάχυνση χρόνου",
+    speedHint: "Η προσομοίωση τρέχει ταχύτερα από τον πραγματικό χρόνο για ορατότητα.",
+    timeoutRate: "Ρυθμός λήξεων (1λ)",
+    avgWait: "Μέση αναμονή κλειδώματος",
+    p95Wait: "P95 αναμονή κλειδώματος",
+    activeLocks: "Ενεργά κλειδώματα",
+    queuedWaiters: "Σε αναμονή",
+    throughput: "Διεκπεραίωση (1λ)",
+    chartLocksTitle: "Κλειδώματα & ουρά διαχρονικά",
+    legendActive: "Ενεργά κλειδώματα",
+    legendQueue: "Σε αναμονή",
+    legendTimeouts: "Λήξεις / δευτ",
+    chartHistTitle: "Κατανομή χρόνου αναμονής κλειδώματος",
+    legendBucket: "Κάδος: 5δ",
+    legendTOBucket: "≥ 90δ = λήξη",
+    chartFocusTitle: "Δημοφιλής κράτηση #0 — ίχνη αιτημάτων",
+    focusLegend: "άφιξη → έναρξη → λήξη, τελευταία 60δ",
+    chartBreakdownTitle: "Ανά τύπο ενέργειας (κυλιόμενα 60δ)",
+    breakdownLegend: "ράβδος = μερίδιο κίνησης",
+    gridTitle: "Κατάσταση κλειδώματος κρατήσεων",
+    gridShown: "εμφανίζονται οι πρώτες 80",
+    cellIdle: "αδρανές",
+    cellLocked: "κλειδωμένο",
+    cellQ1: "1 σε αναμονή",
+    cellQ2: "2-3 σε αναμονή",
+    cellQ3: "4+ σε αναμονή",
+    cellTO: "πρόσφατη λήξη",
+    notesTitle: "Τι μοντελοποιεί η προσομοίωση",
+    note1Bold: "Πεδίο κλειδώματος:",
+    note1: "ένα κατανεμημένο κλείδωμα ανά κράτηση, με κλειδί το ξενοδοχείο και τον αριθμό επιβεβαίωσης. Οποιαδήποτε ταυτόχρονη ενέργεια στην ίδια κράτηση πρέπει να περιμένει τη σειρά της.",
+    note2Bold: "Όριο αναμονής:",
+    note2: "ο αναμένων προσπαθεί κάθε 0,5 δευτερόλεπτα, έως 180 φορές. Μετά από 90 δευτερόλεπτα εγκαταλείπει και το αίτημα αποτυγχάνει με σφάλμα «lock not acquired».",
+    note3Bold: "Μήκος σχεδίου:",
+    note3: "ρεαλιστική σύνθεση ενεργειών ξενοδοχείου — pre-check-in 3 βήματα API, post-notes / update-guest / get-folios / post-payment-method 2 βήματα, refresh 1 βήμα. Κάθε βήμα κρατά το κλείδωμα για όλο τον χρόνο απόκρισης του PMS.",
+    note4Bold: "Παροδικές επαναλήψεις:",
+    note4: "~10% των ανακτήσεων συναντούν παροδική προειδοποίηση «not yet finalized» από το PMS και επαναλαμβάνουν μία φορά μετά από 10δ διάλειμμα, διογκώνοντας τον χρόνο που κρατείται το κλείδωμα.",
+    note5Bold: "Συγκέντρωση σε δημοφιλείς κρατήσεις:",
+    note5: "την ημέρα άφιξης, πολλές ροές (pre-check-in, μέθοδος πληρωμής, post-notes, folios) στοχεύουν τους ίδιους λίγους αριθμούς επιβεβαίωσης — το slider συγκεντρώνει την κίνηση για να αναδείξει τη συμφόρηση.",
+    // Dynamic / canvas
+    sec: "δ",
+    perSec: (n) => `${n} / δευτ`,
+    perMin: (n) => `${n} / λεπτό`,
+    percent: (n) => `${n}%`,
+    speedX: (n) => `${n}×`,
+    maxLocks: (n) => `μέγ κλειδώματα: ${n}`,
+    maxTimeouts: (n) => `μέγ λήξεις/δ: ${n}`,
+    waitingSamples: "αναμονή δειγμάτων…",
+    bucketTO: "≥90 ΛΗ",
+    noFocusTraffic: "καμία κίνηση στην κράτηση #0 ακόμη…",
+    timeoutsLabel: (n, pct) => `${n} ΛΗ (${pct}%)`,
+    avgWaitS: (n) => `${n}δ αναμονή`,
+    tickRel: (s) => `-${s}δ`,
+    actionNames: {
+      PRE_CHECKIN: "Προ-Άφιξη",
+      POST_NOTES: "Σημειώσεις",
+      UPDATE_GUEST: "Ενημέρωση Επισκέπτη",
+      GET_FOLIOS: "Λήψη Λογαριασμών",
+      POST_PAYMENT_METHOD: "Μέθοδος Πληρωμής",
+      PRE_CHECKOUT: "Προ-Αναχώρηση",
+      ADD_ACCOMPANYING_GUEST: "Συνοδός Επισκέπτη",
+      REFRESH_RESERVATION: "Ανανέωση Κράτησης",
+      REFRESH_GUEST: "Ανανέωση Επισκέπτη",
+    },
+  },
+};
+
+let currentLang = (typeof localStorage !== "undefined" && localStorage.getItem("lang")) || "en";
+if (!STRINGS[currentLang]) currentLang = "en";
+function t(key) {
+  return STRINGS[currentLang][key] ?? STRINGS.en[key] ?? key;
+}
+function tAction(name) {
+  return STRINGS[currentLang].actionNames[name] || name;
+}
+
 // Per-action color, used consistently across the breakdown + focus trace.
 const ACTION_COLORS = {
   PRE_CHECKIN: "#4f8cff",
@@ -339,10 +510,10 @@ function renderTimeline() {
   // Axis labels.
   tlCtx.fillStyle = "#98a0b3";
   tlCtx.font = "11px -apple-system, sans-serif";
-  tlCtx.fillText(`max locks: ${maxActive}`, 6, 12);
+  tlCtx.fillText(t("maxLocks")(maxActive), 6, 12);
   tlCtx.textAlign = "right";
   tlCtx.fillStyle = "#e25555";
-  tlCtx.fillText(`max timeouts/s: ${maxTimeout}`, w - 6, 12);
+  tlCtx.fillText(t("maxTimeouts")(maxTimeout), w - 6, 12);
   tlCtx.textAlign = "left";
 }
 
@@ -356,7 +527,7 @@ function renderHistogram() {
   if (total === 0) {
     histCtx.fillStyle = "#98a0b3";
     histCtx.font = "12px -apple-system, sans-serif";
-    histCtx.fillText("waiting for samples…", 12, 24);
+    histCtx.fillText(t("waitingSamples"), 12, 24);
     return;
   }
   const maxBucket = Math.max(...buckets);
@@ -377,7 +548,7 @@ function renderHistogram() {
   histCtx.font = "10px -apple-system, sans-serif";
   histCtx.textAlign = "center";
   for (let i = 0; i < buckets.length; i++) {
-    const label = i === 18 ? "≥90 TO" : `${i * 5}`;
+    const label = i === 18 ? t("bucketTO") : `${i * 5}`;
     histCtx.fillText(label, i * barW + barW / 2, h - 8);
   }
   histCtx.textAlign = "left";
@@ -415,13 +586,13 @@ function renderFocus() {
     focusCtx.moveTo(x, padTop);
     focusCtx.lineTo(x, h - padBot);
     focusCtx.stroke();
-    focusCtx.fillText(`-${windowS - s}s`, x + 2, h - 4);
+    focusCtx.fillText(t("tickRel")(windowS - s), x + 2, h - 4);
   }
 
   const visible = state.focusLog.filter((r) => (r.finishedAt ?? tEnd) >= tStart);
   if (visible.length === 0) {
     focusCtx.fillStyle = "#98a0b3";
-    focusCtx.fillText("no traffic on reservation #0 yet…", labelW, padTop + 18);
+    focusCtx.fillText(t("noFocusTraffic"), labelW, padTop + 18);
     return;
   }
 
@@ -434,7 +605,7 @@ function renderFocus() {
     // Label: action name.
     focusCtx.fillStyle = ACTION_COLORS[req.actionName] || "#ccc";
     focusCtx.font = "11px -apple-system, sans-serif";
-    focusCtx.fillText(req.actionName, 6, y + rowH - 4);
+    focusCtx.fillText(tAction(req.actionName), 6, y + rowH - 4);
 
     // Wait portion: from arrivedAt to startedAt-or-now-or-timeoutAt.
     const arrX = xOf(req.arrivedAt);
@@ -509,10 +680,10 @@ function renderBreakdown() {
     const toClass = timeoutPct >= 25 ? "bad" : timeoutPct >= 8 ? "warn" : "";
 
     row.innerHTML = `
-      <div class="name" style="color:${ACTION_COLORS[name]}">${name}</div>
+      <div class="name" style="color:${ACTION_COLORS[name]}">${tAction(name)}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${share}%;background:${ACTION_COLORS[name]}"></div></div>
-      <div class="timeout-pct ${toClass}">${c.timedOut} TO (${timeoutPct.toFixed(0)}%)</div>
-      <div class="wait">${avgWait.toFixed(0)}s wait</div>
+      <div class="timeout-pct ${toClass}">${t("timeoutsLabel")(c.timedOut, timeoutPct.toFixed(0))}</div>
+      <div class="wait">${t("avgWaitS")(avgWait.toFixed(0))}</div>
     `;
     breakdown.appendChild(row);
   }
@@ -552,8 +723,8 @@ function renderMeters() {
   const waits = state.completed.map((c) => c.waitS).sort((a, b) => a - b);
   const avg = waits.length ? waits.reduce((s, x) => s + x, 0) / waits.length : 0;
   const p95 = waits.length ? waits[Math.floor(waits.length * 0.95)] || waits[waits.length - 1] : 0;
-  meters.avgWait.textContent = `${avg.toFixed(1)}s`;
-  meters.p95Wait.textContent = `${p95.toFixed(1)}s`;
+  meters.avgWait.textContent = `${avg.toFixed(1)}${t("sec")}`;
+  meters.p95Wait.textContent = `${p95.toFixed(1)}${t("sec")}`;
   meters.p95Wait.style.color = p95 > 60 ? "var(--danger)" : p95 > 20 ? "var(--warn)" : "var(--good)";
 
   let active = 0, queued = 0;
@@ -565,10 +736,11 @@ function renderMeters() {
   meters.queuedWaiters.textContent = queued.toString();
   meters.queuedWaiters.style.color = queued > active ? "var(--warn)" : "var(--text)";
 
-  meters.throughput.textContent = `${completedCount} / min`;
+  meters.throughput.textContent = t("perMin")(completedCount);
 }
 
 // ───── Wiring ─────
+const sliderAppliers = [];
 function bindSlider(id, valueId, setter, formatter) {
   const slider = document.getElementById(id);
   const value = document.getElementById(valueId);
@@ -578,25 +750,26 @@ function bindSlider(id, valueId, setter, formatter) {
   };
   slider.addEventListener("input", apply);
   apply();
+  sliderAppliers.push(apply);
 }
 
 bindSlider(
   "response-slider",
   "response-value",
   (v) => (state.pmsStepS = v),
-  (v) => `${v}s`
+  (v) => `${v}${t("sec")}`
 );
 bindSlider(
   "traffic-slider",
   "traffic-value",
   (v) => (state.trafficPerSec = v / 10),
-  (v) => `${(v / 10).toFixed(1)} / sec`
+  (v) => t("perSec")((v / 10).toFixed(1))
 );
 bindSlider(
   "hot-slider",
   "hot-value",
   (v) => (state.hotShare = v / 100),
-  (v) => `${v}%`
+  (v) => t("percent")(v)
 );
 bindSlider(
   "reservations-slider",
@@ -611,13 +784,36 @@ bindSlider(
   "speed-slider",
   "speed-value",
   (v) => (state.speed = v),
-  (v) => `${v}x`
+  (v) => t("speedX")(v)
 );
 
-document.getElementById("play-btn").addEventListener("click", (e) => {
+const playBtn = document.getElementById("play-btn");
+function refreshPlayBtn() {
+  playBtn.textContent = state.running ? t("pause") : t("resume");
+}
+playBtn.addEventListener("click", () => {
   state.running = !state.running;
-  e.target.textContent = state.running ? "Pause" : "Resume";
+  refreshPlayBtn();
 });
+refreshPlayBtn();
+
+const langSelect = document.getElementById("lang-select");
+langSelect.value = currentLang;
+langSelect.addEventListener("change", () => {
+  currentLang = langSelect.value;
+  try { localStorage.setItem("lang", currentLang); } catch (e) {}
+  applyTranslations();
+});
+
+function applyTranslations() {
+  document.documentElement.lang = currentLang;
+  for (const el of document.querySelectorAll("[data-i18n]")) {
+    el.textContent = t(el.dataset.i18n);
+  }
+  refreshPlayBtn();
+  for (const apply of sliderAppliers) apply();
+}
+applyTranslations();
 
 document.getElementById("reset-btn").addEventListener("click", () => {
   state.t = 0;
